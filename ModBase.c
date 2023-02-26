@@ -4,9 +4,19 @@
 #include <linux/cdev.h>
 #include <linux/gpio.h>
 #include <linux/uaccess.h>
-#include <stdio.h>
 
-MODULE_LICENSE("GPL");
+
+
+
+#define DEVICE_NAME "Default Chardev"
+#define CLASS_NAME "Simple class"
+
+void get(void);
+
+void post(void);
+
+
+dev_t dev = 0;
 
 struct Config{
 	char* license;
@@ -15,7 +25,11 @@ struct Config{
 };
 
 
-dev_t dev = 0;
+static struct class *MyClass;
+
+static char Buffer [255];
+static int BufferSize;
+
 
 static ssize_t readDRiv(struct file *File, char *UserBuffer, size_t ammount, loff_t *offs)
 {
@@ -26,6 +40,7 @@ static ssize_t readDRiv(struct file *File, char *UserBuffer, size_t ammount, lof
 	Delta = ToCopy - NotCopied;
 
 	printk("read is %d", Delta);
+	get();
 
 	return Delta;
 }
@@ -40,6 +55,7 @@ static ssize_t writeDRiv(struct file *File, const char *UserBuffer, size_t ammou
 	BufferSize = ToCopy;
 
 	printk("write is %d", Delta);
+	post();
 
 	return Delta;
 }
@@ -64,15 +80,8 @@ static struct file_operations f_ops = {
 	.release = closeDRiv
 };
 
-static struct class *MyClass;
 
-static char Buffer [255];
-static int BufferSize;
-
-#define DEVICE_NAME "Default Chardev"
-#define CLASS_NAME "CUM class"
-
-int Init_chrdev()
+int Init_chrdev(void)
 {
 	int retval = alloc_chrdev_region(&dev, 0, 1, DEVICE_NAME);
 
@@ -94,7 +103,7 @@ int Init_chrdev()
 	return -1;
 }
 
-int CreateDevice()
+int CreateDevice(void)
 {
 	MyClass = class_create(THIS_MODULE, CLASS_NAME);
 
@@ -111,5 +120,6 @@ int CreateDevice()
 		unregister_chrdev_region(dev, DEVICE_NAME);
 		return -1;
 	}
+	printk("class was successfuly created\n");
 	return 0;
 }
